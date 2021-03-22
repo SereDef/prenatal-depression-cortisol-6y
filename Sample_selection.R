@@ -40,9 +40,28 @@ readquick <- function(filename, rootdir = pathtodata, exclude_col = "") { # only
   } 
   return(dat)
 }
+
+#-------------------------------------------------------------------------------
+# General functioning of the family was measured with the family assessment device (FAD).
+# This function calculates FAD scores accounting for (max 25%) missing values and 
+# dichotomizes the scores according to the cutoff for unhealthy family functioning 
+# provided by the manual (Byles et al., 1988), = 2.17. 
+fad_scores <- function(set, dich = FALSE){
+  fadtotal <- rowSums(abs(set)) # Sum items
+  no_na_fad <- rowSums(!is.na(set)) # Number of endorsed items
+  # Compute mean score + do not calculate when more than 25% of items are missing
+  fad_score <- ifelse(no_na_fad >= 9, yes = fadtotal/no_na_fad, no = NA) 
+  if (dich == T) { fad_score <- ifelse(fad_score > 2.17, yes = 1, no = 0) }
+  return(fad_score) 
+}
+
 #-------------------------------------------------------------------------------
 # Calculate the percentage missing data
 percent_missing <- function(var) { sum(is.na(var)) / length(var) * 100 }
+
+#-------------------------------------------------------------------------------
+# This will come in handy for exclusion
+'%notin%' <- Negate('%in%')
 
 #### ---------------------------------------------------------------------- ####
 
@@ -51,9 +70,9 @@ pre_bsi <- readquick("GR1003-BSI D1_22112016.sav") # 9778 obs. of 261 vars
 hair <- readquick("CORTISOLHAIRF5_08062015.sav") # 6690 obs. of 35 vars
 
 demogr <- readquick("CHILD-ALLGENERALDATA_07072020.sav") # 9901 obs. of 112 vars
-social <- readquick("GR1003-C_08042016.sav")  #  9778 obs of 90 vars
 smokingv1 <- readquick("MATERNALSMOKING_22112016.sav") #  9778 obs of 11 vars
 drinkingv1 <- readquick("GEDRAGSGROEP_MaternalDrinking_22112016.sav") #  9778 obs of 18 vars
+social <- readquick("GR1003-Family Assessment Device J1-J12_22112016.sav")
 
 ################################################################################
 ############################# PRENATAL DEPRESSION ##############################
@@ -66,18 +85,18 @@ drinkingv1 <- readquick("GEDRAGSGROEP_MaternalDrinking_22112016.sav") #  9778 ob
 # Internal consistency for the depression scale: α = .80. 
 # Mothers with a score higher than 0.75 have clinically relevant depressive symptoms 
 # according to the Dutch manual. 
-predep <- data.frame(pre_bsi$idm, pre_bsi$dep, # min: 0 ; max: 4
+predep <- data.frame(pre_bsi$idm, 
+                     pre_bsi$dep, # min: 0 ; max: 4 
                      ifelse(pre_bsi$dep > 0.75, yes = 1, no = 0)) # 1 = depression; 0 = no depression
-colnames(predep) <- c("IDM", "cont_prenatal_depression", "prenatal_depression")
-
+colnames(predep) <- c("idm", "bsiScore", "bsiScoreFlg")
 
 ################################################################################
 ########################## CHILD HAIR CORTISOL @6y #############################
 ################################################################################
 
 haircort <- data.frame(hair$idc, hair$agechildyf5, 
-                       hair$hair_cortisol_pgmg) # min: 0.076 ; max: 292.736
-colnames(haircort) <- c("IDC", "child_age", "cortisol")
+                       hair$hair_cortisol_pgmg, hair$log10_haircortisol) # min: 0.076 ; max: 292.736   # LOG ln 
+colnames(haircort) <- c("idc", "childAge", "cortisol", "lncortisol")
 
 ################################################################################
 ################################ COVARIATES ####################################
@@ -85,41 +104,56 @@ colnames(haircort) <- c("IDC", "child_age", "cortisol")
 
 child_general = demogr[,c( 'idc', 'idm', 
                      'gender',    # child sex
-                     'ethnfv2', # ethnicity original variable
+                     'ethnfv2',   # ethnicity original variable
                      'educm',     # highest education finished (mother, during pregnancy)
                      'income5',   # net income of household when the child is 5. 
                      'twin',      # used for exclusion criteria 
                      'mother',    # mother id used to identify siblings (for exclusion)
                      'parity',    # parity (used for imputation)
                      'gestbir',   # gestational age at birth (used for imputation)
-                     'weight',    # gestational weight (used for imputation)
                      'bmi_0',     # maternal BMI (self-reported), before pregnancy
                      'bmi_1',     # maternal BMI during pregnancy (used for imputation)
+                     'mardich',   # marital status during pregnancy
                      'age_m_v2')] # maternal age at intake (used for imputation) 
 # Again, let's try to keep it user friendly 
-colnames(child_general) = c("IDC", "IDM", "sex", "ethnicity_orig", "m_education_pregnancy", 
-                            "income_5y", "twin", "mother_id", "parity", "gest_age_birth", 
-                           "gest_weight", "m_bmi_berore_pregnancy", "m_bmi_pregnancy", "m_age_cont")
+colnames(child_general)[c(10:11, 14)] = c("gestAge", "prePregBMI", "maternalAge")
 
 # Ethnicity recode – dichotomized into: dutch, western and non-western;
 for (i in 1:9901) {
-  if (is.na(child_general$ethnicity_orig[i])) { child_general$ethnicity[i] <- NA
-  } else if (child_general$ethnicity_orig[i] == 1 | child_general$ethnicity_orig[i] == 300 | 
-             child_general$ethnicity_orig[i] == 500 | child_general$ethnicity_orig[i] >= 700) { 
+  if (is.na(child_general$ethnfv2[i])) { child_general$childRaceEth[i] <- NA
+  } else if (child_general$ethnfv2[i] == 1 | child_general$ethnfv2[i] == 300 | 
+             child_general$ethnfv2[i] == 500 | child_general$ethnfv2[i] >= 700) { 
     # Dutch (1), American, western (300) Asian, western (500) European (700), Oceanie (800)
-    child_general$ethnicity[i] <- 1 
+    child_general$childRaceEth[i] <- 0 # White 
   } else { 
-    child_general$ethnicity[i] <- 2 } 
+    child_general$childRaceEth[i] <- 1 } # Non-white
     # Indonesian (2), Cape Verdian (3), Maroccan (4) Dutch Antilles (5) Surinamese 
     # (6) Turkish (7) African (200), American, non western (400), Asian, non western (600)
 } 
+
+# Sex recode 0 = boy, 1 = girl
+child_general$sex <- child_general$gender - 1 
+
+# Marital status recode 
+child_general$maternalMaritalStatus <- recode(child_general$mardich, '1=1; 2=0')
+
+# maternal education recode 
+# DICH: "No education"/"Primary"/"Secondary-phase 1"/"Secondary-phase 2" = 0 "Higher-phase 1"/"Higher-phase 2" = 1.
+# based on Centraal Bureau voor de Statistiek (2016).
+child_general$maternalEdu <- ifelse(child_general$educm <= 3, yes = 0, no = 1) 
+
+# Income recode 
+# DICH: according to the Central Statistic Netherlands (2013). 
+# Net household income below 1600 €/month (basic needs level) = risk.
+child_general$maternalIncome <- ifelse(child_general$income5 < 4, yes = 0, no = 1)
+
 #-------------------------------------------------------------------------------
 ### MATERNAL SMOKING during pregnancy 
 
 smoking = smokingv1[,c('idm', 'smoke_all')] # (1) never a smoker; 
 # (2) smoked until pregnancy was known (i.e., first trimester only); 
 # (3) continued smoking during pregnancy.
-colnames(smoking) = c("IDM", "m_smoking")
+colnames(smoking)[2] = "maternalSmoking"
 
 #-------------------------------------------------------------------------------
 ### MATERNAL ALCOHOL CONSUMPTION during pregnancy
@@ -128,23 +162,34 @@ drinking = drinkingv1[,c('idm', 'mdrink_updated')] # (0) never;
 # (1) until pregnancy was known (i.e., first trimester only); 
 # (2) continued during pregnancy occasionally;
 # (3) continued during pregnancy frequently.
-colnames(drinking) = c("IDM", "m_drinking")
+colnames(drinking)[2] = "maternalDrinking"
 
 #-------------------------------------------------------------------------------
-#  social support disuring pregnancy 
+#  social support during pregnancy 
 
-# First I need to recode some "Not applicable" answers into NAs.
-social$c0700103[social$c0700103 == 5] <- NA
+# Recode items so higher scores reflec more social support 
+fad <- data.frame(social$j0100103, 
+                  social$j0300103,
+                  social$j0500103,
+                  social$j0700103,
+                  social$j0900103,
+                  social$j1100103,
+                  5 - social$j0200103, # Recode inverse item
+                  5 - social$j0400103, # Recode inverse item
+                  5 - social$j0600103, # Recode inverse item
+                  5 - social$j0800103, # Recode inverse item
+                  5 - social$j1000103, # Recode inverse item
+                  5 - social$j1200103)
 
-support = social[, c('idm', 'c0700103')] # Difficulties between you and your partner? "No"/ "Slight"/"Moderate"/"Serious"
-colnames(support) = c("IDM", "support_partner")
+social$familySS <- fad_scores(fad)
 
 ################################################################################
 # Merge all variables together
-depre_covs <- Reduce(function(x,y) merge(x = x, y = y, by = 'IDM',  all.x = TRUE),
-                                   list(predep, child_general, smoking, drinking, support))
+depre_covs <- Reduce(function(x,y) merge(x = x, y = y, by = "idm",  all.x = TRUE),
+                                   list(predep, child_general, smoking, drinking, social))
 
-full_dataset = merge(depre_covs, haircort, by = "IDC" , all.x = TRUE)
+full_dataset = merge(depre_covs, haircort, by = "idc" , all.x = TRUE)
+
 ################################################################################
 ##----------------------------------------------------------------------------##
 ## -------------------- Exclude participants (flowchart) -------------------- ##
@@ -154,25 +199,65 @@ initial_sample <- 9901
 
 ## First exclusion step:
 
-# Exclude children with missing internalizing score
+# Exclude children with missing cortisol
 outcome_meas <- full_dataset[!is.na(full_dataset$cortisol),] 
 after_cort <- nrow(outcome_meas)
-suba <- after_cort - initial_sample
+sub1 <- after_cort - initial_sample
 
 # Exclude all non-white participants 
-white <- outcome_meas[outcome_meas$ethnicity == 1, ]
+white <- outcome_meas[outcome_meas$childRaceEth == 0, ] # white
 after_racism <- nrow(white)
-subb <- after_racism - after_cort
+sub2 <- after_racism - after_cort
 
-# Exclude twins
+# Exclude twins 
 no_twins <- white[white$twin == 0, ]
 after_twins <- nrow(no_twins)
-subc <- after_twins - after_racism
+sub3 <- after_twins - after_racism
+
+# Select only one sibling (based on data availability or randomly).
+# First, I determine a list of mothers that have more than one child in the set.
+# NOTE: duplicated() is the best option I could find to determine which mother IDs
+# recur more than once (very non-elegant, tbh, but using table() gets even uglier)
+siblings_id = data.frame(no_twins$mother[duplicated(no_twins$mother)])
+# duplicated() funtion does not allow to ignore NAs so I remove them manually.
+# I also transform the numeric vector into a dataframe because of indexing problems.
+siblings_id = siblings_id[!is.na(siblings_id),]; siblings_id = data.frame(siblings_id);
+# Second, I create an empty vector to fill with the IDC of the sibling(s) with more 
+# missing items or with a randomly picked sibling in case they have the same nr of missing. 
+worse_sibling = rep(NA, dim(siblings_id)[1] + 1) # I will need the "+1" for triplets! 
+# Loop through the mother IDs I previously identified and link them to IDCs
+for (i in 1:dim(siblings_id)[1]) {
+  siblings = no_twins[no_twins$mother == siblings_id[i,1], ] # identify the couples of siblings
+  # For some reason when I run the line above 2 rows of NAs are created too, go figure. 
+  # Let's get rid of them:
+  siblings = siblings[rowSums(is.na(siblings)) != ncol(siblings), ]
+  # There is one mother with 3 siblings, let's select the "best" one and get rid of the other two
+  if (dim(siblings)[1] > 2) {
+    nmiss = c( sum(is.na(siblings[1,])), sum(is.na(siblings[2,])), sum(is.na(siblings[3,])) )
+    if (which.min(nmiss) == 1) { worse_sibling[i] = siblings[2,'idc']
+    worse_sibling[dim(siblings_id)[1] + 1] = siblings[3,'idc']
+    } else if (which.min(nmiss) == 2) { worse_sibling[i] = siblings[1,'idc']
+    worse_sibling[dim(siblings_id)[1] + 1] = siblings[3,'idc']
+    } else { worse_sibling[i] = siblings[1,'idc'] 
+    worse_sibling[dim(siblings_id)[1] + 1] = siblings[2,'idc'] }
+  }
+  # otherwise, select the "worse" sibling (with more missing) and add to it the the black list
+  if ( sum(is.na(siblings[1,])) > sum(is.na(siblings[2,])) ) {
+    worse_sibling[i] = siblings[1,'idc']
+  } else if ( sum(is.na(siblings[1,])) == sum(is.na(siblings[2,])) ) {
+    worse_sibling[i] = siblings[sample(1:2, 1),'idc']
+  } else { worse_sibling[i] = siblings[2,'idc'] }
+}
+
+# Now we are finally ready to exclude siblings
+final <- no_twins[no_twins$idc %notin% worse_sibling, ]
+after_siblings <- nrow(final)
+sub4 <- after_siblings - after_twins
 
 # Flowchart
-flowchart <- list(initial_sample, suba, after_cort, subb, after_racism, subc, 
-                  after_twins)
+flowchart <- list(initial_sample, sub1, after_cort, sub2, after_racism, sub3, 
+                  after_twins, sub4, after_siblings)
 
 # Rename final dataset:
-dataset <- no_twins
-cat(paste("Well, congrats! Your final dataset includes", after_twins ,"participants.")) # 1886
+dataset <- final
+cat(paste("Well, congrats! Your final dataset includes", after_siblings ,"participants.")) # 1886
