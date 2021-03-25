@@ -8,8 +8,8 @@
 # GR1003-BSI D1_22112016.sav
 # CORTISOLHAIRF5_08062015.sav
 # CHILD-ALLGENERALDATA_07072020.sav
-# GR1003-C_08042016.sav, (GR1003-Family Assessment Device J1-J12_22112016.sav,)
-# MATERNALSMOKING_22112016.sav, GEDRAGSGROEP_MaternalDrinking_22112016.sav, 
+# GR1003-Family Assessment Device J1-J12_22112016.sav,
+# MATERNALSMOKING_22112016.sav,
 # (GR1019-E_01072012.sav and BSI 3 years of age_GR1065 G1-GR1066 C1_22112016.sav)
 
 # Ok let's get started
@@ -56,10 +56,6 @@ fad_scores <- function(set, dich = FALSE){
 }
 
 #-------------------------------------------------------------------------------
-# Calculate the percentage missing data
-percent_missing <- function(var) { sum(is.na(var)) / length(var) * 100 }
-
-#-------------------------------------------------------------------------------
 # This will come in handy for exclusion
 '%notin%' <- Negate('%in%')
 
@@ -71,7 +67,7 @@ hair <- readquick("CORTISOLHAIRF5_08062015.sav") # 6690 obs. of 35 vars
 
 demogr <- readquick("CHILD-ALLGENERALDATA_07072020.sav") # 9901 obs. of 112 vars
 smokingv1 <- readquick("MATERNALSMOKING_22112016.sav") #  9778 obs of 11 vars
-drinkingv1 <- readquick("GEDRAGSGROEP_MaternalDrinking_22112016.sav") #  9778 obs of 18 vars
+# drinkingv1 <- readquick("GEDRAGSGROEP_MaternalDrinking_22112016.sav") # excluded from analysis because not available in PV
 social <- readquick("GR1003-Family Assessment Device J1-J12_22112016.sav")
 
 ################################################################################
@@ -95,7 +91,8 @@ colnames(predep) <- c("idm", "bsiScore", "bsiScoreFlg")
 ################################################################################
 
 haircort <- data.frame(hair$idc, hair$agechildyf5, 
-                       hair$hair_cortisol_pgmg, hair$log10_haircortisol) # min: 0.076 ; max: 292.736   # LOG ln 
+                       hair$hair_cortisol_pgmg, 
+                       log(hair$hair_cortisol_pgmg))
 colnames(haircort) <- c("idc", "childAge", "cortisol", "lncortisol")
 
 ################################################################################
@@ -112,32 +109,26 @@ child_general = demogr[,c( 'idc', 'idm',
                      'parity',    # parity (used for imputation)
                      'gestbir',   # gestational age at birth (used for imputation)
                      'bmi_0',     # maternal BMI (self-reported), before pregnancy
-                     'bmi_1',     # maternal BMI during pregnancy (used for imputation)
                      'mardich',   # marital status during pregnancy
                      'age_m_v2')] # maternal age at intake (used for imputation) 
 # Again, let's try to keep it user friendly 
-colnames(child_general)[c(10:11, 14)] = c("gestAge", "prePregBMI", "maternalAge")
+colnames(child_general)[c(10:11, 13)] = c("gestAge", "prePregBMI", "maternalAge")
 
-# Ethnicity recode – dichotomized into: dutch, western and non-western;
-for (i in 1:9901) {
-  if (is.na(child_general$ethnfv2[i])) { child_general$childRaceEth[i] <- NA
-  } else if (child_general$ethnfv2[i] == 1 | child_general$ethnfv2[i] == 300 | 
-             child_general$ethnfv2[i] == 500 | child_general$ethnfv2[i] >= 700) { 
-    # Dutch (1), American, western (300) Asian, western (500) European (700), Oceanie (800)
-    child_general$childRaceEth[i] <- 0 # White 
-  } else { 
-    child_general$childRaceEth[i] <- 1 } # Non-white
-    # Indonesian (2), Cape Verdian (3), Maroccan (4) Dutch Antilles (5) Surinamese 
-    # (6) Turkish (7) African (200), American, non western (400), Asian, non western (600)
-} 
-
+# Ethnicity recode – dichotomized into: western and non-western;
+child_general$childRaceEth <- ifelse(child_general$ethnfv2 == 1 | child_general$ethnfv2 == 300 | 
+                                       child_general$ethnfv2 == 500 | child_general$ethnfv2 >= 700, 
+                                    # Dutch (1), American, western (300) Asian, western (500) European (700), Oceanie (800)
+                                    yes = 0, # White 
+                                    no = 1) # Non-white
+                                    # Indonesian (2), Cape Verdian (3), Maroccan (4) Dutch Antilles (5) Surinamese 
+                                    # (6) Turkish (7) African (200), American, non western (400), Asian, non western (600)
 # Sex recode 0 = boy, 1 = girl
 child_general$sex <- child_general$gender - 1 
 
-# Marital status recode 
+# Marital status recode 0 = no partner 1 = married or cohabiting
 child_general$maternalMaritalStatus <- recode(child_general$mardich, '1=1; 2=0')
 
-# maternal education recode 
+# Maternal education recode 
 # DICH: "No education"/"Primary"/"Secondary-phase 1"/"Secondary-phase 2" = 0 "Higher-phase 1"/"Higher-phase 2" = 1.
 # based on Centraal Bureau voor de Statistiek (2016).
 child_general$maternalEdu <- ifelse(child_general$educm <= 3, yes = 0, no = 1) 
@@ -148,26 +139,20 @@ child_general$maternalEdu <- ifelse(child_general$educm <= 3, yes = 0, no = 1)
 child_general$maternalIncome <- ifelse(child_general$income5 < 4, yes = 0, no = 1)
 
 #-------------------------------------------------------------------------------
-### MATERNAL SMOKING during pregnancy 
+# MATERNAL SMOKING during pregnancy 
 
-smoking = smokingv1[,c('idm', 'smoke_all')] # (1) never a smoker; 
-# (2) smoked until pregnancy was known (i.e., first trimester only); 
-# (3) continued smoking during pregnancy.
-colnames(smoking)[2] = "maternalSmoking"
-
-#-------------------------------------------------------------------------------
-### MATERNAL ALCOHOL CONSUMPTION during pregnancy
-
-drinking = drinkingv1[,c('idm', 'mdrink_updated')] # (0) never; 
-# (1) until pregnancy was known (i.e., first trimester only); 
-# (2) continued during pregnancy occasionally;
-# (3) continued during pregnancy frequently.
-colnames(drinking)[2] = "maternalDrinking"
+smoking <- data.frame(smokingv1$idm, 
+                      smokingv1$smoke_all - 1) # recode: 0 = never a smoker;
+            # (1) smoked until pregnancy was known (i.e., first trimester only); 
+            # (2) continued smoking during pregnancy.
+colnames(smoking) <- c('idm', "maternalSmoking")
 
 #-------------------------------------------------------------------------------
-#  social support during pregnancy 
+# MATERNAL ALCOHOL CONSUMPTION during pregnancy # not used
+#-------------------------------------------------------------------------------
+# SOCIAL SUPPORT during pregnancy 
 
-# Recode items so higher scores reflec more social support 
+# Recode items so higher scores reflect more social support 
 fad <- data.frame(social$j0100103, 
                   social$j0300103,
                   social$j0500103,
@@ -179,14 +164,14 @@ fad <- data.frame(social$j0100103,
                   5 - social$j0600103, # Recode inverse item
                   5 - social$j0800103, # Recode inverse item
                   5 - social$j1000103, # Recode inverse item
-                  5 - social$j1200103)
+                  5 - social$j1200103) # Recode inverse item
 
 social$familySS <- fad_scores(fad)
 
 ################################################################################
 # Merge all variables together
 depre_covs <- Reduce(function(x,y) merge(x = x, y = y, by = "idm",  all.x = TRUE),
-                                   list(predep, child_general, smoking, drinking, social))
+                                   list(predep, child_general, smoking, social))
 
 full_dataset = merge(depre_covs, haircort, by = "idc" , all.x = TRUE)
 
@@ -197,22 +182,15 @@ full_dataset = merge(depre_covs, haircort, by = "idc" , all.x = TRUE)
 
 initial_sample <- 9901
 
-## First exclusion step:
-
-# Exclude children with missing cortisol
+## First exclusion step: Exclude children with missing cortisol
 outcome_meas <- full_dataset[!is.na(full_dataset$cortisol),] 
 after_cort <- nrow(outcome_meas)
 sub1 <- after_cort - initial_sample
 
-# Exclude all non-white participants 
-white <- outcome_meas[outcome_meas$childRaceEth == 0, ] # white
-after_racism <- nrow(white)
-sub2 <- after_racism - after_cort
-
 # Exclude twins 
-no_twins <- white[white$twin == 0, ]
+no_twins <- outcome_meas[outcome_meas$twin == 0, ]
 after_twins <- nrow(no_twins)
-sub3 <- after_twins - after_racism
+sub2 <- after_twins - after_cort
 
 # Select only one sibling (based on data availability or randomly).
 # First, I determine a list of mothers that have more than one child in the set.
@@ -252,12 +230,13 @@ for (i in 1:dim(siblings_id)[1]) {
 # Now we are finally ready to exclude siblings
 final <- no_twins[no_twins$idc %notin% worse_sibling, ]
 after_siblings <- nrow(final)
-sub4 <- after_siblings - after_twins
+sub3 <- after_siblings - after_twins
 
 # Flowchart
-flowchart <- list(initial_sample, sub1, after_cort, sub2, after_racism, sub3, 
-                  after_twins, sub4, after_siblings)
+flowchart <- list(initial_sample, sub1, after_cort, sub2, after_twins, sub3, after_siblings)
 
-# Rename final dataset:
-dataset <- final
-cat(paste("Well, congrats! Your final dataset includes", after_siblings ,"participants.")) # 1886
+cat(paste("Well, congrats! Your final dataset includes", after_siblings ,"participants.")) # 2877
+
+# ------------------------------------------------------------------------------
+# Save the raw dataset
+saveRDS(final, paste(pathtodata,'dataset_raw.rds', sep = ""))
