@@ -19,7 +19,7 @@ library(foreign)
 library(car)
 
 # check if the path to the data is already in memory, otherwise ask for it. 
-if (exists("pathtodata") == F) { pathtodata = readline(prompt="Enter path to data: ") } # -> CUSTOMIZE TO APPROPRIATE PATH /Users/Serena/Desktop/CortisolData/
+if (exists("pathtodata") == F) { pathtodata = readline(prompt="Enter path to data: ") } # -> CUSTOMIZE TO APPROPRIATE PATH 
 # The code assumes that all raw data is stored in ONE folder.
 
 #### ----------------------------- FUNCTIONS ----------------------------- ####
