@@ -21,7 +21,6 @@ if (exists("pathtodata") == F) { pathtodata = readline(prompt="Enter path to dat
 # Load datasets
 depcor_raw <- readRDS(paste(pathtodata, 'dataset_raw.rds', sep = ""))
 
-
 #-------------------------------------------------------------------------------
 # Calculate the percentage missing data for every column
 percent_missing <- function(var) { sum(is.na(var)) / length(var) * 100 }
@@ -86,11 +85,11 @@ predictormatrix[c('bsiScore'), # USE: maternalAge, prePregBMI, maternalEdu, mate
                 c('bsiScoreFlg', 'cortisol', 'lncortisol', 'sex', 'childAge',
                   'parity', 'gestAge', 'childRaceEth')] <- 0
 
-predictormatrix[c('gestAge','childRaceEth'), # USE: each other, sex
+predictormatrix[c('gestAge'), # USE: childRaceEth, sex
                 c('bsiScore', 'bsiScoreFlg', 'cortisol', 'lncortisol', 'childAge', 
                   'prePregBMI', 'maternalEdu', 'maternalIncome', 
                   'familySS', 'maternalMaritalStatus', 'maternalSmoking', 'parity', 
-                  'maternalAge', 'gestAge', 'childRaceEth')] <- 0
+                  'maternalAge')] <- 0
 
 predictormatrix[c('parity'), # USE: maternalAge
                 c('bsiScore', 'bsiScoreFlg', 'cortisol', 'lncortisol', 'sex', 'childAge', 

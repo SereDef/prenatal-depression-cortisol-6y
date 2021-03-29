@@ -187,10 +187,15 @@ outcome_meas <- full_dataset[!is.na(full_dataset$cortisol),]
 after_cort <- nrow(outcome_meas)
 sub1 <- after_cort - initial_sample
 
+# Exclude participants with missing ethnicity values
+ethn_present <- outcome_meas[!is.na(outcome_meas$childRaceEth),] 
+after_ethn <- nrow(ethn_present)
+sub2 <- after_ethn - after_cort
+
 # Exclude twins 
-no_twins <- outcome_meas[outcome_meas$twin == 0, ]
+no_twins <- ethn_present[ethn_present$twin == 0, ]
 after_twins <- nrow(no_twins)
-sub2 <- after_twins - after_cort
+sub3 <- after_twins - after_ethn
 
 # Select only one sibling (based on data availability or randomly).
 # First, I determine a list of mothers that have more than one child in the set.
@@ -230,10 +235,10 @@ for (i in 1:dim(siblings_id)[1]) {
 # Now we are finally ready to exclude siblings
 final <- no_twins[no_twins$idc %notin% worse_sibling, ]
 after_siblings <- nrow(final)
-sub3 <- after_siblings - after_twins
+sub4 <- after_siblings - after_twins
 
 # Flowchart
-flowchart <- list(initial_sample, sub1, after_cort, sub2, after_twins, sub3, after_siblings)
+flowchart <- list(initial_sample, sub1, after_cort, sub2, after_ethn, sub3, after_twins, sub4, after_siblings)
 
 cat(paste("Well, congrats! Your final dataset includes", after_siblings ,"participants.")) # 2877
 
