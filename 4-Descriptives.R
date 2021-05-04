@@ -2,21 +2,30 @@
 
 # check if the path to the dataset is already in memory, otherwise ask for it. 
 if (exists("pathtodata") == F) { pathtodata = readline(prompt="Enter path to data: ") }
-
 ################################################################################
 # Load datasets
 depcor <- readRDS(paste(pathtodata, 'dataset_raw.rds', sep = ""))
 
+# white participants only 
+white <- depcor[depcor$childRaceEth == 0, ]
 ################################################################################
 #                             BASIC DESCRIPTIVES
 
 N <- nrow(depcor) # total sample N
 NODEP <- summary(as.factor(depcor$bsiScoreFlg))[1] # N controls
 DEP <- summary(as.factor(depcor$bsiScoreFlg))[2] # N cases
-  
-cat(paste("Overall:   ", N, 
+
+wN <- nrow(white) # total sample N
+wNODEP <- summary(as.factor(white$bsiScoreFlg))[1] # N controls
+wDEP <- summary(as.factor(white$bsiScoreFlg))[2] # N cases
+
+cat(paste("FULL\nOverall:   ", N, 
           "\nBSI < 0.75:", NODEP, 
           "\nBSI > 0.75:", DEP ))
+
+cat(paste("WHITE\nOverall:   ", wN, 
+          "\nBSI < 0.75:", wNODEP, 
+          "\nBSI > 0.75:", wDEP ))
 # ------------------------------------------------------------------------------
 # compute mean and standard deviation of entire sample and in cases vs controls
 meansd <- function(var, splitvar = depcor$bsiScoreFlg) {
@@ -25,9 +34,9 @@ meansd <- function(var, splitvar = depcor$bsiScoreFlg) {
   splitm <- format(round(tapply(var, splitvar, mean, na.rm = T), 1), nsmall = 1)
   splits <- format(round(tapply(var, splitvar, sd, na.rm = T), 2), nsmall = 2)
   
-  cat(paste("Overall:    ", totm, "(± ", tots, ")",
-            "\nBSI < 0.75: ", splitm[1], "(± ", splits[1], ")",
-            "\nBSI > 0.75: ", splitm[2], "(± ", splits[2], ")", sep = ""))
+  cat(paste("Overall:    ", totm, " (± ", tots, ")",
+            "\nBSI < 0.75: ", splitm[1], " (± ", splits[1], ")",
+            "\nBSI > 0.75: ", splitm[2], " (± ", splits[2], ")", sep = ""))
 }
 # ------------------------------------------------------------------------------
 # compute n and percent of entire sample and in cases vs controls for binary variables
@@ -70,6 +79,7 @@ meansd(depcor$maternalAge)
 meansd(depcor$prePregBMI)
 npercent(depcor$maternalEdu)
 npercent3(depcor$maternalSmoking)
+npercent(depcor$maternalMaritalStatus)
 npercent(depcor$maternalIncome)
 npercent(depcor$sex)
 npercent(depcor$childRaceEth)
@@ -78,6 +88,20 @@ meansd(depcor$familySS)
 meansd(depcor$childAge)
 meansd(depcor$lncortisol)
 
+N <- wN
+DEP <- wDEP
+NODEP <- wNODEP
+meansd(white$maternalAge, splitvar = white$bsiScoreFlg); # white only
+meansd(white$prePregBMI, splitvar = white$bsiScoreFlg); # white only
+npercent(white$maternalEdu, splitvar = white$bsiScoreFlg); # white only
+npercent3(white$maternalSmoking, splitvar = white$bsiScoreFlg); # white only
+npercent(white$maternalMaritalStatus, splitvar = white$bsiScoreFlg); # white only
+npercent(white$maternalIncome, splitvar = white$bsiScoreFlg); # white only
+npercent(white$sex, splitvar = white$bsiScoreFlg); # white only
+meansd(white$gestAge, splitvar = white$bsiScoreFlg); # white only
+meansd(white$familySS, splitvar = white$bsiScoreFlg); # white only
+meansd(white$childAge, splitvar = white$bsiScoreFlg); # white only
+meansd(white$lncortisol, splitvar = white$bsiScoreFlg); # white only
 ################################################################################
 ################################################################################
 ################################################################################
