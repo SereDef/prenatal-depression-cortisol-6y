@@ -19,7 +19,7 @@ if (exists("pathtodata") == F) { pathtodata = readline(prompt="Enter path to dat
 
 ################################################################################
 # Load datasets
-depcor_raw <- readRDS(paste(pathtodata, 'dataset_raw.rds', sep = ""))
+depcor_raw <- readRDS(paste(pathtodata, '/dataset_raw.rds', sep = ""))
 
 #-------------------------------------------------------------------------------
 # Calculate the percentage missing data for every column
@@ -106,7 +106,7 @@ VisSeq <- imp0$visitSequence
 # Run the actual imputation. To ensure convergence among the variables but retain
 # low computational load, we do 20 iterations using 5 imputed datasets
 
-imputation <- mice(depcor, m = 5, # nr of imputed datasets
+imputation <- mice(depcor, m = 50, # nr of imputed datasets
                    maxit = 20, # nr of iteration taken to impute missing values
                    seed = 373844, # set a seed for the random number generation in case i need to generate the same dataset again
                    method = meth,
@@ -140,7 +140,7 @@ saveRDS(after_racism, paste(pathtodata,'sampleA.rds', sep = "")) # white only
 saveRDS(imputation, paste(pathtodata,'sampleB.rds', sep = "")) # complete set
 
 # I also save the last imputed dataset for sanity checks
-depcor_imputed <- complete(imputation, 5) 
+depcor_imputed <- complete(imputation, 50) 
 saveRDS(depcor_imputed, paste(pathtodata,'B_imputed5.rds', sep = ""))
 
 
