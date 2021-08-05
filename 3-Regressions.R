@@ -108,31 +108,31 @@ fit5 <- with(impB, lm(zlncortisol ~  bsiScoreFlg))
 mod5 <- summary(pool(fit5)); mod5$sign <- ifelse(mod5$p.value < 0.05, "*", " ")
 
 # minimally adjusted model
-fit6 <- with(impB, lm(zlncortisol ~  bsiScoreFlg + sex + zchildAge + childRaceEth))
+fit6 <- with(impB, lm(zlncortisol ~  bsiScoreFlg*childRaceEth + sex + zchildAge))
 mod6 <- summary(pool(fit6)); mod6$sign <- ifelse(mod6$p.value < 0.05, "*", " ")
 
 # fully adjusted model
-fit7 <- with(impB, lm(zlncortisol ~  bsiScoreFlg + sex + zchildAge + childRaceEth +
+fit7 <- with(impB, lm(zlncortisol ~  bsiScoreFlg*childRaceEth + sex + zchildAge +
                         zprePregBMI + maternalEdu + maternalIncome))
 mod7 <- summary(pool(fit7)); mod7$sign <- ifelse(mod7$p.value < 0.05, "*", " ")
 
 # additionally adjusted model
-fit8 <- with(impB, lm(zlncortisol ~  bsiScoreFlg + sex + zchildAge + childRaceEth +
+fit8 <- with(impB, lm(zlncortisol ~  bsiScoreFlg*childRaceEth + sex + zchildAge +
                         zprePregBMI + maternalEdu + maternalIncome + 
                         zfamilySS + maternalMaritalStatus + maternalSmoking))
 mod8 <- summary(pool(fit8)); mod8$sign <- ifelse(mod8$p.value < 0.05, "*", " ")
 
 # minimally adjusted model with interaction 
-fit6int <- with(impB, lm(zlncortisol ~  bsiScoreFlg * sex + zchildAge + childRaceEth))
+fit6int <- with(impB, lm(zlncortisol ~  bsiScoreFlg*childRaceEth + bsiScoreFlg*sex + zchildAge))
 mod6int <- summary(pool(fit6int)); mod6int$sign <- ifelse(mod6int$p.value < 0.05, "*", " ")
 
 # fully adjusted model with interaction 
-fit7int <- with(impB, lm(zlncortisol ~  bsiScoreFlg * sex + zchildAge + childRaceEth +
+fit7int <- with(impB, lm(zlncortisol ~  bsiScoreFlg*childRaceEth + bsiScoreFlg*sex + zchildAge +
                         zprePregBMI + maternalEdu + maternalIncome))
 mod7int <- summary(pool(fit7int)); mod7int$sign <- ifelse(mod7int$p.value < 0.05, "*", " ")
 
 # additionally adjusted model with interaction 
-fit8int <- with(impB, lm(zlncortisol ~  bsiScoreFlg * sex + zchildAge + childRaceEth +
+fit8int <- with(impB, lm(zlncortisol ~  bsiScoreFlg*childRaceEth + bsiScoreFlg*sex + zchildAge +
                         zprePregBMI + maternalEdu + maternalIncome + 
                         zfamilySS + maternalMaritalStatus + maternalSmoking))
 mod8int <- summary(pool(fit8int)); mod8int$sign <- ifelse(mod8int$p.value < 0.05, "*", " ")
@@ -198,31 +198,31 @@ fit13 <- with(impB, lm(zlncortisol ~  zbsiScore))
 mod13 <- summary(pool(fit13)); mod13$sign <- ifelse(mod13$p.value < 0.05, "*", " ")
 
 # minimally adjusted model
-fit14 <- with(impB, lm(zlncortisol ~  zbsiScore + sex + zchildAge + childRaceEth))
+fit14 <- with(impB, lm(zlncortisol ~  zbsiScore*childRaceEth + sex + zchildAge))
 mod14 <- summary(pool(fit14)); mod14$sign <- ifelse(mod14$p.value < 0.05, "*", " ")
 
 # fully adjusted model
-fit15 <- with(impB, lm(zlncortisol ~  zbsiScore + sex + zchildAge + childRaceEth +
+fit15 <- with(impB, lm(zlncortisol ~  zbsiScore*childRaceEth + sex + zchildAge +
                         zprePregBMI + maternalEdu + maternalIncome))
 mod15 <- summary(pool(fit15)); mod15$sign <- ifelse(mod15$p.value < 0.05, "*", " ")
 
 # additionally adjusted model
-fit16 <- with(impB, lm(zlncortisol ~  zbsiScore + sex + zchildAge + childRaceEth +
+fit16 <- with(impB, lm(zlncortisol ~  zbsiScore*childRaceEth + sex + zchildAge +
                         zprePregBMI + maternalEdu + maternalIncome + 
                         zfamilySS + maternalMaritalStatus + maternalSmoking))
 mod16 <- summary(pool(fit16)); mod16$sign <- ifelse(mod16$p.value < 0.05, "*", " ")
 
 # minimally adjusted model with interaction
-fit14int <- with(impB, lm(zlncortisol ~  zbsiScore * sex + zchildAge + childRaceEth))
+fit14int <- with(impB, lm(zlncortisol ~  zbsiScore*childRaceEth + zbsiScore*sex + zchildAge))
 mod14int <- summary(pool(fit14int)); mod14int$sign <- ifelse(mod14int$p.value < 0.05, "*", " ")
 
 # fully adjusted model with interaction
-fit15int <- with(impB, lm(zlncortisol ~  zbsiScore * sex + zchildAge + childRaceEth +
+fit15int <- with(impB, lm(zlncortisol ~  zbsiScore*childRaceEth + zbsiScore*sex + zchildAge +
                          zprePregBMI + maternalEdu + maternalIncome))
 mod15int <- summary(pool(fit15int)); mod15int$sign <- ifelse(mod15int$p.value < 0.05, "*", " ")
 
 # additionally adjusted model with interaction
-fit16int <- with(impB, lm(zlncortisol ~  zbsiScore * sex + zchildAge + childRaceEth +
+fit16int <- with(impB, lm(zlncortisol ~  zbsiScore*childRaceEth + zbsiScore*sex + zchildAge +
                          zprePregBMI + maternalEdu + maternalIncome + 
                          zfamilySS + maternalMaritalStatus + maternalSmoking))
 mod16int <- summary(pool(fit16int)); mod16int$sign <- ifelse(mod16int$p.value < 0.05, "*", " ")
@@ -245,7 +245,7 @@ modls <- list("1.base_white" = mod1, "2.min_white" = mod2,
               "15.cont_full_all" = mod15, "16.cont_addit_all" = mod16, 
               "14int.cont_min_all" = mod14int, "15int.cont_full_all" = mod15int, "16int.cont_addit_all" = mod16int)
 
-write.xlsx(modls, file = paste0(pathtodata, "Results.xlsx"))
+write.xlsx(modls, file = paste0(pathtodata, "Results_int.xlsx"))
 
 
 ################################################################################
