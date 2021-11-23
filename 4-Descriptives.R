@@ -86,7 +86,7 @@ npercent(depcor$childRaceEth)
 meansd(depcor$gestAge)
 meansd(depcor$familySS)
 meansd(depcor$childAge)
-meansd(depcor$lncortisol)
+meansd(depcor$cortisol)
 
 N <- wN
 DEP <- wDEP
