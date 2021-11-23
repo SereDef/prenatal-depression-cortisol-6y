@@ -110,7 +110,8 @@ child_general = demogr[,c( 'idc', 'idm',
                      'gestbir',   # gestational age at birth (used for imputation)
                      'bmi_0',     # maternal BMI (self-reported), before pregnancy
                      'mardich',   # marital status during pregnancy
-                     'age_m_v2')] # maternal age at intake (used for imputation) 
+                     'age_m_v2',  # maternal age at intake (used for imputation) 
+                     'visit5')]   # for selection
 # Again, let's try to keep it user friendly 
 colnames(child_general)[c(10:11, 13)] = c("gestAge", "prePregBMI", "maternalAge")
 
@@ -180,22 +181,24 @@ full_dataset = merge(depre_covs, haircort, by = "idc" , all.x = TRUE)
 ## -------------------- Exclude participants (flowchart) -------------------- ##
 ##----------------------------------------------------------------------------##
 
-initial_sample <- 9901
+# only white eligible participants
+white_only = full_dataset[full_dataset$childRaceEth == 0,]
+initial_sample <- nrow(white_only)
 
-## First exclusion step: Exclude children with missing cortisol
-outcome_meas <- full_dataset[!is.na(full_dataset$cortisol),] 
+## First exclusion step: exclude childen who did not come to visit 
+visit <- white_only[!is.na(white_only$visit5),] 
+after_visit <- nrow(visit)
+sub1 <- after_visit - initial_sample
+
+## Second exclusion step: Exclude children with missing cortisol
+outcome_meas <- visit[!is.na(visit$cortisol),] 
 after_cort <- nrow(outcome_meas)
-sub1 <- after_cort - initial_sample
-
-# Exclude participants with missing ethnicity values
-ethn_present <- outcome_meas[!is.na(outcome_meas$childRaceEth),] 
-after_ethn <- nrow(ethn_present)
-sub2 <- after_ethn - after_cort
+sub2 <- after_cort - after_visit
 
 # Exclude twins 
-no_twins <- ethn_present[ethn_present$twin == 0, ]
+no_twins <- outcome_meas[outcome_meas$twin == 0, ]
 after_twins <- nrow(no_twins)
-sub3 <- after_twins - after_ethn
+sub3 <- after_twins - after_cort
 
 # Select only one sibling (based on data availability or randomly).
 # First, I determine a list of mothers that have more than one child in the set.
@@ -238,7 +241,7 @@ after_siblings <- nrow(final)
 sub4 <- after_siblings - after_twins
 
 # Flowchart
-flowchart <- list(initial_sample, sub1, after_cort, sub2, after_ethn, sub3, after_twins, sub4, after_siblings)
+flowchart <- list(initial_sample, sub1, after_visit, sub2, after_cort, sub3,  after_twins, sub4, after_siblings)
 
 cat(paste("Well, congrats! Your final dataset includes", after_siblings ,"participants.")) # 2877
 

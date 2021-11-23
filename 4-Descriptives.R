@@ -101,7 +101,7 @@ npercent(white$sex, splitvar = white$bsiScoreFlg); # white only
 meansd(white$gestAge, splitvar = white$bsiScoreFlg); # white only
 meansd(white$familySS, splitvar = white$bsiScoreFlg); # white only
 meansd(white$childAge, splitvar = white$bsiScoreFlg); # white only
-meansd(white$lncortisol, splitvar = white$bsiScoreFlg); # white only
+meansd(white$cortisol, splitvar = white$bsiScoreFlg); # white only
 ################################################################################
 ################################################################################
 ################################################################################
